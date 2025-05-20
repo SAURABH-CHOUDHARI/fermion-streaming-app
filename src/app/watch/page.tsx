@@ -50,10 +50,10 @@ export default function WatchPage() {
                             if (data.streams && data.streams.length > 0) {
                                 setAvailableStreams(data.streams);
                             }
-                            
+
                             // Initialize MediaSoup device with router capabilities
                             await handleJoined(data);
-                            
+
                             // Create transport after successful join
                             createTransport();
                         }
@@ -71,6 +71,7 @@ export default function WatchPage() {
                         }
                         else if (data.type === 'consumed') {
                             // Handle the consumer
+                            console.log('Received consume request:', data);
                             await handleConsume(data);
                         }
                         else if (data.type === 'consumer-resumed') {
@@ -195,7 +196,7 @@ export default function WatchPage() {
                         transportId: data.id,
                         dtlsParameters,
                     }));
-                    
+
                     // Call the callback to complete the connection
                     callback();
                 } catch (error) {
@@ -217,7 +218,7 @@ export default function WatchPage() {
             });
 
             console.log('Transport created successfully');
-            
+
         } catch (err) {
             console.error('Failed to connect transport:', err);
             setError('Failed to create media transport');
@@ -227,6 +228,7 @@ export default function WatchPage() {
 
     // Consume a media stream
     const consumeStream = (streamId: string) => {
+
         if (!deviceRef.current || !rtpCapabilitiesRef.current) {
             setError('Device not initialized properly');
             return;
@@ -240,7 +242,7 @@ export default function WatchPage() {
         if (ws.current && ws.current.readyState === WebSocket.OPEN) {
             console.log(`Requesting to consume stream: ${streamId}`);
             setActiveStream(streamId);
-            
+
             ws.current.send(JSON.stringify({
                 action: 'consume',
                 producerId: streamId,
@@ -256,12 +258,13 @@ export default function WatchPage() {
     const handleConsume = async (data: any) => {
         try {
             console.log('Handling consume response:', data);
-            
+
             if (!transportRef.current) {
                 throw new Error('Transport not created');
             }
 
             if (!data.id || !data.producerId || !data.kind || !data.rtpParameters) {
+                console.log("Looking for producer:", data.producerId);
                 console.error('Missing required consumer data:', data);
                 throw new Error('Invalid consumer data received from server');
             }
@@ -284,7 +287,7 @@ export default function WatchPage() {
                 const stream = new MediaStream();
                 stream.addTrack(consumer.track);
                 videoRef.current.srcObject = stream;
-                
+
                 try {
                     await videoRef.current.play();
                     console.log('Video playback started');
@@ -297,7 +300,7 @@ export default function WatchPage() {
             // Resume the consumer
             console.log('Resuming consumer with ID:', data.id);
             consumer.resume();
-            
+
             ws.current?.send(JSON.stringify({
                 action: 'resume-consumer',
                 consumerId: data.id,
@@ -312,12 +315,12 @@ export default function WatchPage() {
             setLoading(false);
         }
     };
-    
+
     // Handle autoplay issues
     const handleAutoplayIssue = (error: any) => {
         if (error.name === 'NotAllowedError') {
             alert('Autoplay blocked. Please click the video area to enable playback.');
-            
+
             if (videoRef.current) {
                 const playOnClick = async () => {
                     try {
@@ -327,7 +330,7 @@ export default function WatchPage() {
                         console.error('Still cannot play video:', e);
                     }
                 };
-                
+
                 videoRef.current.addEventListener('click', playOnClick);
             }
         }
@@ -338,30 +341,30 @@ export default function WatchPage() {
         console.log('Manually reconnecting...');
         setLoading(true);
         setError(null);
-        
+
         // Clean up existing connections
         if (consumerRef.current) {
             consumerRef.current.close();
             consumerRef.current = null;
         }
-        
+
         if (transportRef.current) {
             transportRef.current.close();
             transportRef.current = null;
         }
-        
+
         if (videoRef.current) {
             videoRef.current.srcObject = null;
         }
-        
+
         // Reconnect from scratch
         if (ws.current) {
             ws.current.close();
         }
-        
+
         const newWs = new WebSocket('ws://localhost:3001');
         ws.current = newWs;
-        
+
         newWs.onopen = () => {
             console.log('WebSocket reconnected');
             newWs.send(JSON.stringify({
@@ -369,7 +372,7 @@ export default function WatchPage() {
                 role: 'watcher'
             }));
         };
-        
+
         newWs.onmessage = ws.current.onmessage;
         newWs.onerror = ws.current.onerror;
         newWs.onclose = ws.current.onclose;
@@ -377,12 +380,12 @@ export default function WatchPage() {
 
     // Debug information
     const connectionStatus = () => {
-        const wsStatus = ws.current ? 
-            ws.current.readyState === WebSocket.OPEN ? 'Connected' : 
-            ws.current.readyState === WebSocket.CONNECTING ? 'Connecting' : 
-            ws.current.readyState === WebSocket.CLOSING ? 'Closing' : 'Closed'
+        const wsStatus = ws.current ?
+            ws.current.readyState === WebSocket.OPEN ? 'Connected' :
+                ws.current.readyState === WebSocket.CONNECTING ? 'Connecting' :
+                    ws.current.readyState === WebSocket.CLOSING ? 'Closing' : 'Closed'
             : 'Not initialized';
-            
+
         return `WebSocket: ${wsStatus}, Transport: ${transportRef.current ? 'Created' : 'None'}, Consumer: ${consumerRef.current ? 'Active' : 'None'}`;
     };
 
@@ -411,7 +414,7 @@ export default function WatchPage() {
                                 <div className="bg-red-500 bg-opacity-75 text-white p-4 rounded text-center">
                                     <p className="text-lg font-semibold">Error</p>
                                     <p>{error}</p>
-                                    <button 
+                                    <button
                                         className="mt-4 px-4 py-2 bg-white text-red-500 rounded hover:bg-gray-100 transition"
                                         onClick={handleReconnect}
                                     >
@@ -499,7 +502,7 @@ export default function WatchPage() {
                         </button>
                     </div>
                 </div>
-                
+
                 {/* Debug information */}
                 <div className="bg-black rounded-lg p-4 shadow-lg mt-4">
                     <h2 className="text-lg font-semibold text-white mb-4">Debug Information</h2>
