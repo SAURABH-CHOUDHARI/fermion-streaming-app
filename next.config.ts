@@ -1,9 +1,8 @@
-// next.config.js
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
-  webpack: (config , { isServer }) => {
-    // WebRTC requires access to global variables
+  reactStrictMode: false, // 🔥 disabled to avoid double invokes in dev
+
+  webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
@@ -18,6 +17,6 @@ const nextConfig = {
     }
     return config;
   },
-}
+};
 
 module.exports = nextConfig;

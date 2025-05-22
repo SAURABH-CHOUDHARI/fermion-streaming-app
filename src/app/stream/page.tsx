@@ -420,7 +420,7 @@ const VideoStreamPage: React.FC = () => {
             localStreamRef.current.getTracks().forEach(track => track.stop());
         }
 
-        setIsProducing(false);
+        // setIsProducing(false);
 
         // Start producing with the correct source 
         if (isProducing) {
